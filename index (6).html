@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NOT NAHID // VISION</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --green: #00ff66;
+            --green-dim: rgba(0,255,102,0.15);
+            --green-mid: rgba(0,255,102,0.5);
+            --bg: #030303;
+            --panel-bg: rgba(0,0,0,0.88);
+            --border: 1px solid rgba(0,255,102,0.4);
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--green);
+            font-family: 'Share Tech Mono', monospace;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* ── CANVAS ── */
+        #canvas { position: fixed; inset: 0; z-index: 0; }
+
+        /* ── TOP BAR ── */
+        #topbar {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 20;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 1.5rem;
+            height: 48px;
+            background: rgba(0,0,0,0.7);
+            border-bottom: var(--border);
+            backdrop-filter: blur(6px);
+        }
+        #topbar .logo {
+            font-family: 'Orbitron', monospace;
+            font-weight: 900;
+            font-size: 13px;
+            letter-spacing: 4px;
+            color: var(--green);
+            text-shadow: 0 0 12px var(--green-mid);
+        }
+        #topbar .stats {
+            display: flex; gap: 1.5rem; font-size: 11px;
+            color: rgba(0,255,102,0.55);
+        }
+        #topbar .stats span b { color: var(--green); }
+
+        /* ── UPLOAD SCREEN ── */
+        #upload-screen {
+            position: fixed; inset: 0; z-index: 30;
+            display: flex; align-items: center; justify-content: center;
+            background: #030303;
+        }
+        .upload-box {
+            text-align: center;
+            border: var(--border);
+            padding: 3rem 4rem;
+            background: var(--panel-bg);
+            box-shadow: 0 0 40px rgba(0,255,102,0.08), inset 0 0 60px rgba(0,0,0,0.4);
+        }
+        .upload-box h1 {
+            font-family: 'Orbitron', monospace;
+            font-size: 22px; font-weight: 900;
+            letter-spacing: 6px;
+            margin-bottom: 8px;
+            text-shadow: 0 0 20px var(--green-mid);
+        }
+        .upload-box p { font-size: 12px; color: rgba(0,255,102,0.4); margin-bottom: 2rem; }
+        .drop-zone {
+            border: 1px dashed rgba(0,255,102,0.5);
+            padding: 2rem 3rem;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+            font-size: 12px;
+            color: rgba(0,255,102,0.5);
+        }
+        .drop-zone:hover, .drop-zone.drag-over {
+            background: var(--green-dim);
+            border-color: var(--green);
+            color: var(--green);
+        }
+        .drop-zone input { display: none; }
+        .drop-icon { font-size: 32px; margin-bottom: 12px; opacity: 0.5; }
+
+        /* ── SIDEBAR CONTROLS ── */
+        #sidebar {
+            position: fixed; left: 0; top: 48px; bottom: 0; z-index: 20;
+            width: 220px;
+            background: rgba(0,0,0,0.8);
+            border-right: var(--border);
+            padding: 1rem;
+            display: none;
+            flex-direction: column;
+            gap: 1.2rem;
+            backdrop-filter: blur(4px);
+            overflow-y: auto;
+        }
+        #sidebar.visible { display: flex; }
+
+        .ctrl-group label {
+            display: block;
+            font-size: 10px;
+            color: rgba(0,255,102,0.4);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+        .ctrl-group .val {
+            float: right;
+            color: var(--green);
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%; height: 2px;
+            background: rgba(0,255,102,0.2);
+            border-radius: 2px;
+            outline: none;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px; height: 12px;
+            background: var(--green);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 8px var(--green-mid);
+        }
+
+        .mode-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+        .mode-btn {
+            background: transparent;
+            border: var(--border);
+            color: rgba(0,255,102,0.5);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 10px;
+            padding: 6px 4px;
+            cursor: pointer;
+            letter-spacing: 1px;
+            transition: all 0.15s;
+        }
+        .mode-btn:hover { background: var(--green-dim); color: var(--green); }
+        .mode-btn.active {
+            background: var(--green);
+            color: #000;
+            font-weight: bold;
+        }
+
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+        }
+        .color-swatch {
+            height: 22px;
+            border: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+            border-radius: 2px;
+            transition: transform 0.15s;
+        }
+        .color-swatch:hover { transform: scale(1.1); }
+        .color-swatch.active { outline: 2px solid #fff; outline-offset: 2px; }
+
+        .action-btn {
+            width: 100%;
+            background: transparent;
+            border: var(--border);
+            color: var(--green);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 11px;
+            padding: 8px;
+            cursor: pointer;
+            letter-spacing: 1px;
+            transition: background 0.15s;
+        }
+        .action-btn:hover { background: var(--green-dim); }
+
+        hr.divider { border: none; border-top: 1px solid rgba(0,255,102,0.15); }
+
+        /* ── BOTTOM HUD ── */
+        #hud {
+            position: fixed; bottom: 0; left: 220px; right: 0; z-index: 20;
+            height: 36px;
+            background: rgba(0,0,0,0.7);
+            border-top: var(--border);
+            display: none;
+            align-items: center;
+            padding: 0 1rem;
+            gap: 1.5rem;
+            font-size: 10px;
+            color: rgba(0,255,102,0.4);
+            backdrop-filter: blur(4px);
+        }
+        #hud.visible { display: flex; }
+        #hud b { color: var(--green); }
+
+        /* ── OVERLAY TEXT ── */
+        #overlay-text {
+            position: fixed; bottom: 46px; right: 1.5rem; z-index: 15;
+            width: 280px;
+            text-align: right;
+            font-size: 11px;
+            line-height: 1.9;
+            color: rgba(0,255,102,0.2);
+            pointer-events: none;
+            transition: opacity 0.4s;
+        }
+
+        /* ── SNAPSHOT FLASH ── */
+        #snap-flash {
+            position: fixed; inset: 0; z-index: 50;
+            background: rgba(0,255,102,0.25);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.1s;
+        }
+
+        /* ── NOTIFICATION ── */
+        #notif {
+            position: fixed; top: 60px; right: 1.5rem; z-index: 40;
+            background: var(--panel-bg);
+            border: var(--border);
+            padding: 8px 14px;
+            font-size: 11px;
+            color: var(--green);
+            letter-spacing: 1px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+
+        /* ── KEYBOARD LEGEND ── */
+        #kb-legend {
+            position: fixed; right: 1.5rem; top: 60px; z-index: 15;
+            font-size: 9px;
+            color: rgba(0,255,102,0.25);
+            line-height: 1.9;
+            text-align: right;
+            pointer-events: none;
+        }
+        #kb-legend span { color: rgba(0,255,102,0.5); }
+
+        /* Scrollbar */
+        #sidebar::-webkit-scrollbar { width: 4px; }
+        #sidebar::-webkit-scrollbar-track { background: transparent; }
+        #sidebar::-webkit-scrollbar-thumb { background: rgba(0,255,102,0.3); border-radius: 2px; }
+    </style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<!-- UPLOAD SCREEN -->
+<div id="upload-screen">
+    <div class="upload-box">
+        <h1>NOT NAHID</h1>
+        <p>// VISION SYSTEM v2.0 // ASCII VIDEO ENGINE //</p>
+        <div class="drop-zone" id="drop-zone">
+            <div class="drop-icon">⬡</div>
+            <p style="font-size:13px;color:var(--green);margin-bottom:8px;">DROP VIDEO HERE</p>
+            <p style="margin-bottom:0;">or click to browse — MP4, WEBM, MOV</p>
+            <input type="file" id="file-input" accept="video/*">
+        </div>
+    </div>
+</div>
+
+<!-- TOP BAR -->
+<div id="topbar">
+    <div class="logo">NOT NAHID // VISION</div>
+    <div class="stats">
+        <span>FPS <b id="stat-fps">--</b></span>
+        <span>COLS <b id="stat-cols">--</b></span>
+        <span>ROWS <b id="stat-rows">--</b></span>
+        <span>CHAR <b id="stat-char">--</b></span>
+        <span>MODE <b id="stat-mode">ASCII</b></span>
+    </div>
+</div>
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+
+    <div class="ctrl-group">
+        <label>Render Mode</label>
+        <div class="mode-grid">
+            <button class="mode-btn active" data-mode="ascii">ASCII</button>
+            <button class="mode-btn" data-mode="block">BLOCK</button>
+            <button class="mode-btn" data-mode="binary">BINARY</button>
+            <button class="mode-btn" data-mode="braille">BRAILLE</button>
+            <button class="mode-btn" data-mode="matrix">MATRIX</button>
+            <button class="mode-btn" data-mode="edges">EDGES</button>
+        </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="ctrl-group">
+        <label>Cell Size <span class="val" id="val-cell">12</span></label>
+        <input type="range" id="ctrl-cell" min="4" max="28" value="12" step="2">
+    </div>
+
+    <div class="ctrl-group">
+        <label>Brightness <span class="val" id="val-bright">100</span>%</label>
+        <input type="range" id="ctrl-bright" min="20" max="220" value="100">
+    </div>
+
+    <div class="ctrl-group">
+        <label>Contrast <span class="val" id="val-contrast">100</span>%</label>
+        <input type="range" id="ctrl-contrast" min="20" max="300" value="100">
+    </div>
+
+    <div class="ctrl-group">
+        <label>Trail <span class="val" id="val-trail">40</span>%</label>
+        <input type="range" id="ctrl-trail" min="0" max="95" value="40">
+    </div>
+
+    <div class="ctrl-group">
+        <label>Glitch <span class="val" id="val-glitch">0</span>%</label>
+        <input type="range" id="ctrl-glitch" min="0" max="100" value="0">
+    </div>
+
+    <div class="ctrl-group">
+        <label>Invert</label>
+        <button class="mode-btn" id="btn-invert" style="width:100%">OFF</button>
+    </div>
+
+    <hr class="divider">
+
+    <div class="ctrl-group">
+        <label>Color Palette</label>
+        <div class="color-grid">
+            <div class="color-swatch active" data-color="#00ff66" style="background:#00ff66" title="Matrix Green"></div>
+            <div class="color-swatch" data-color="#00cfff" style="background:#00cfff" title="Cyan"></div>
+            <div class="color-swatch" data-color="#ff6600" style="background:#ff6600" title="Amber"></div>
+            <div class="color-swatch" data-color="#ff0077" style="background:#ff0077" title="Pink"></div>
+            <div class="color-swatch" data-color="#ffffff" style="background:#ffffff" title="White"></div>
+            <div class="color-swatch" data-color="#ffe066" style="background:#ffe066" title="Gold"></div>
+            <div class="color-swatch" data-color="#aa44ff" style="background:#aa44ff" title="Violet"></div>
+            <div class="color-swatch" data-color="#ff4444" style="background:#ff4444" title="Red"></div>
+        </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="ctrl-group">
+        <label>Playback Speed <span class="val" id="val-speed">1.0</span>x</label>
+        <input type="range" id="ctrl-speed" min="0.1" max="3" value="1" step="0.1">
+    </div>
+
+    <button class="action-btn" id="btn-playpause">⏸ PAUSE</button>
+    <button class="action-btn" id="btn-snapshot">◈ SNAPSHOT</button>
+    <button class="action-btn" id="btn-fullscreen">⛶ FULLSCREEN</button>
+    <button class="action-btn" id="btn-change">⏏ CHANGE VIDEO</button>
+
+</div>
+
+<!-- HUD -->
+<div id="hud">
+    <span>CELL <b id="hud-cell">12</b>px</span>
+    <span>TRAIL <b id="hud-trail">40</b>%</span>
+    <span>GLITCH <b id="hud-glitch">0</b>%</span>
+    <span>COLOR <b id="hud-color">#00ff66</b></span>
+    <span style="margin-left:auto;">[ SPACE ] pause  [ G ] glitch  [ I ] invert  [ S ] snapshot  [ F ] fullscreen</span>
+</div>
+
+<!-- OVERLAY TEXT -->
+<div id="overlay-text">
+    That's my last Duchess painted on the wall,<br>
+    Looking as if she were alive. I call<br>
+    That piece a wonder, now.
+</div>
+
+<!-- KEYBOARD LEGEND -->
+<div id="kb-legend">
+    <span>1-6</span> change mode<br>
+    <span>+/-</span> cell size<br>
+    <span>SPACE</span> pause<br>
+    <span>G</span> glitch burst<br>
+    <span>I</span> invert<br>
+    <span>S</span> snapshot<br>
+    <span>F</span> fullscreen
+</div>
+
+<!-- SNAPSHOT FLASH -->
+<div id="snap-flash"></div>
+
+<!-- NOTIFICATION -->
+<div id="notif"></div>
+
+<!-- HIDDEN VIDEO -->
+<video id="video" style="display:none" loop playsinline></video>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d', { willReadFrequently: true });
+const video = document.getElementById('video');
+const uploadScreen = document.getElementById('upload-screen');
+const sidebar = document.getElementById('sidebar');
+const hud = document.getElementById('hud');
+const kbLegend = document.getElementById('kb-legend');
+const overlayText = document.getElementById('overlay-text');
+const snapFlash = document.getElementById('snap-flash');
+const notif = document.getElementById('notif');
+
+const offscreen = document.createElement('canvas');
+const offCtx = offscreen.getContext('2d', { willReadFrequently: true });
+
+// ── State ──
+let mode = 'ascii';
+let cellSize = 12;
+let brightness = 100;
+let contrast = 100;
+let trail = 40;
+let glitch = 0;
+let invert = false;
+let activeColor = '#00ff66';
+let running = false;
+let frameCount = 0;
+let lastFps = 0;
+let lastFpsTime = performance.now();
+let animId = null;
+let glitchBurst = 0;
+
+// ── Char sets ──
+const CHARSETS = {
+    ascii:  ' .\'`^",:;Il!i><~+_-?][}{1)(|/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$',
+    block:  ' ░▒▓█',
+    binary: ' 01',
+    braille: '⠀⠁⠂⠃⠄⠅⠆⠇⠈⠉⠊⠋⠌⠍⠎⠏⠐⠑⠒⠓⠔⠕⠖⠗⠘⠙⠚⠛⠜⠝⠞⠟⠠⠡⠢⠣⠤⠥⠦⠧⠨⠩⠪⠫⠬⠭⠮⠯⠰⠱⠲⠳⠴⠵⠶⠷⠸⠹⠺⠻⠼⠽⠾⠿',
+    matrix: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZｦｧｨｩｪｫｬｭｮｯｰｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ',
+};
+
+// ── Canvas resize ──
+function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ── File upload / drop ──
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+
+dropZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => loadFile(e.target.files[0]));
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const f = e.dataTransfer.files[0];
+    if (f && f.type.startsWith('video/')) loadFile(f);
+});
+
+function loadFile(file) {
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    video.src = url;
+    video.muted = true;
+    video.play();
+    video.addEventListener('canplay', startEngine, { once: true });
+}
+
+function startEngine() {
+    uploadScreen.style.display = 'none';
+    sidebar.classList.add('visible');
+    hud.classList.add('visible');
+    kbLegend.style.display = 'none';
+    running = true;
+    if (animId) cancelAnimationFrame(animId);
+    draw();
+}
+
+// ── EDGE DETECTION helpers ──
+let prevFrame = null;
+
+function getEdge(data, i, cols) {
+    const luma = (d, j) => (0.299 * d[j] + 0.587 * d[j+1] + 0.114 * d[j+2]);
+    const c = luma(data, i);
+    const r = (i + 4 < data.length) ? luma(data, i + 4) : c;
+    const d = (i + cols * 4 < data.length) ? luma(data, i + cols * 4) : c;
+    const grad = Math.abs(c - r) + Math.abs(c - d);
+    return grad;
+}
+
+// ── DRAW ──
+function draw() {
+    if (!running) return;
+    animId = requestAnimationFrame(draw);
+    if (video.paused && glitchBurst <= 0) return;
+
+    const W = canvas.width;
+    const H = canvas.height;
+    const cols = Math.floor(W / cellSize);
+    const rows = Math.floor(H / cellSize);
+
+    offscreen.width = cols;
+    offscreen.height = rows;
+
+    // Apply brightness/contrast to offscreen draw
+    offCtx.filter = `brightness(${brightness}%) contrast(${contrast}%)`;
+    offCtx.drawImage(video, 0, 0, cols, rows);
+    offCtx.filter = 'none';
+
+    const frame = offCtx.getImageData(0, 0, cols, rows);
+    const data = frame.data;
+
+    // Trail effect
+    const alpha = (100 - trail) / 100;
+    ctx.fillStyle = `rgba(3,3,3,${alpha})`;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.font = `${cellSize}px 'Share Tech Mono', monospace`;
+    ctx.textBaseline = 'top';
+
+    const charset = CHARSETS[mode] || CHARSETS.ascii;
+    const len = charset.length;
+
+    const effectiveGlitch = Math.max(glitch, glitchBurst);
+    if (glitchBurst > 0) glitchBurst = Math.max(0, glitchBurst - 3);
+
+    for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+            let xi = x, yi = y;
+
+            // Glitch offset
+            if (effectiveGlitch > 0 && Math.random() * 100 < effectiveGlitch) {
+                xi = Math.max(0, Math.min(cols - 1, x + Math.floor((Math.random() - 0.5) * effectiveGlitch * 0.4)));
+                yi = Math.max(0, Math.min(rows - 1, y + Math.floor((Math.random() - 0.5) * effectiveGlitch * 0.15)));
+            }
+
+            const i = (yi * cols + xi) * 4;
+            let r = data[i], g = data[i+1], b = data[i+2];
+
+            let luma = 0.299 * r + 0.587 * g + 0.114 * b;
+            if (invert) luma = 255 - luma;
+
+            let char, charColor;
+
+            if (mode === 'edges') {
+                const edge = getEdge(data, i, cols);
+                luma = Math.min(255, edge * 3);
+                const t = luma / 255;
+                const chars = ' .:-|+=*#@';
+                char = chars[Math.floor(t * (chars.length - 1))];
+                charColor = activeColor;
+            } else {
+                const t = luma / 255;
+                const idx = Math.floor(t * (len - 1));
+                char = charset[idx];
+
+                // Color mode: tint by video color
+                if (effectiveGlitch > 30 && Math.random() < 0.05) {
+                    charColor = `hsl(${Math.random()*360},100%,70%)`;
+                } else {
+                    // Parse activeColor and blend with video chroma
+                    charColor = activeColor;
+                }
+            }
+
+            if (char && char !== ' ' && char !== '⠀') {
+                ctx.fillStyle = charColor;
+                ctx.fillText(char, x * cellSize, y * cellSize);
+            }
+        }
+    }
+
+    // FPS counter
+    frameCount++;
+    const now = performance.now();
+    if (now - lastFpsTime >= 500) {
+        lastFps = Math.round(frameCount / ((now - lastFpsTime) / 1000));
+        frameCount = 0;
+        lastFpsTime = now;
+        document.getElementById('stat-fps').textContent = lastFps;
+        document.getElementById('stat-cols').textContent = cols;
+        document.getElementById('stat-rows').textContent = rows;
+        document.getElementById('stat-char').textContent = charset.length;
+        document.getElementById('stat-mode').textContent = mode.toUpperCase();
+    }
+}
+
+// ── CONTROLS ──
+function bindSlider(id, valId, prop, cb) {
+    const el = document.getElementById(id);
+    const label = document.getElementById(valId);
+    el.addEventListener('input', () => {
+        const v = parseFloat(el.value);
+        label.textContent = prop === 'speed' ? v.toFixed(1) : Math.round(v);
+        if (prop === 'cellSize') cellSize = v;
+        else if (prop === 'brightness') brightness = v;
+        else if (prop === 'contrast') contrast = v;
+        else if (prop === 'trail') {
+            trail = v;
+            document.getElementById('hud-trail').textContent = Math.round(v);
+        } else if (prop === 'glitch') {
+            glitch = v;
+            document.getElementById('hud-glitch').textContent = Math.round(v);
+        } else if (prop === 'speed') {
+            video.playbackRate = v;
+        }
+        if (cb) cb(v);
+    });
+}
+
+bindSlider('ctrl-cell', 'val-cell', 'cellSize');
+bindSlider('ctrl-bright', 'val-bright', 'brightness');
+bindSlider('ctrl-contrast', 'val-contrast', 'contrast');
+bindSlider('ctrl-trail', 'val-trail', 'trail');
+bindSlider('ctrl-glitch', 'val-glitch', 'glitch');
+bindSlider('ctrl-speed', 'val-speed', 'speed');
+
+// Mode buttons
+document.querySelectorAll('.mode-btn[data-mode]').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.mode-btn[data-mode]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        mode = btn.dataset.mode;
+    });
+});
+
+// Invert
+const btnInvert = document.getElementById('btn-invert');
+btnInvert.addEventListener('click', () => {
+    invert = !invert;
+    btnInvert.textContent = invert ? 'ON' : 'OFF';
+    btnInvert.classList.toggle('active', invert);
+});
+
+// Color swatches
+document.querySelectorAll('.color-swatch').forEach(sw => {
+    sw.addEventListener('click', () => {
+        document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+        sw.classList.add('active');
+        activeColor = sw.dataset.color;
+        document.getElementById('hud-color').textContent = activeColor;
+        canvas.style.color = activeColor;
+    });
+});
+
+// Play/Pause
+const btnPP = document.getElementById('btn-playpause');
+btnPP.addEventListener('click', togglePause);
+function togglePause() {
+    if (video.paused) { video.play(); btnPP.textContent = '⏸ PAUSE'; }
+    else { video.pause(); btnPP.textContent = '▶ PLAY'; }
+}
+
+// Snapshot
+document.getElementById('btn-snapshot').addEventListener('click', doSnapshot);
+function doSnapshot() {
+    // flash
+    snapFlash.style.opacity = '1';
+    setTimeout(() => snapFlash.style.opacity = '0', 150);
+    const link = document.createElement('a');
+    link.download = `not-nahid-${Date.now()}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    notify('SNAPSHOT SAVED');
+}
+
+// Fullscreen
+document.getElementById('btn-fullscreen').addEventListener('click', () => {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+    else document.exitFullscreen();
+});
+
+// Change video
+document.getElementById('btn-change').addEventListener('click', () => {
+    running = false;
+    cancelAnimationFrame(animId);
+    video.pause();
+    sidebar.classList.remove('visible');
+    hud.classList.remove('visible');
+    kbLegend.style.display = '';
+    uploadScreen.style.display = 'flex';
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+});
+
+// ── NOTIFICATIONS ──
+let notifTimer = null;
+function notify(msg) {
+    notif.textContent = msg;
+    notif.style.opacity = '1';
+    if (notifTimer) clearTimeout(notifTimer);
+    notifTimer = setTimeout(() => notif.style.opacity = '0', 1800);
+}
+
+// ── KEYBOARD SHORTCUTS ──
+document.addEventListener('keydown', e => {
+    if (!running) return;
+    const tag = document.activeElement.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+    switch (e.key) {
+        case ' ': e.preventDefault(); togglePause(); break;
+        case 'g': case 'G': glitchBurst = 80; notify('GLITCH BURST'); break;
+        case 'i': case 'I':
+            invert = !invert;
+            btnInvert.textContent = invert ? 'ON' : 'OFF';
+            btnInvert.classList.toggle('active', invert);
+            notify('INVERT ' + (invert ? 'ON' : 'OFF'));
+            break;
+        case 's': case 'S': doSnapshot(); break;
+        case 'f': case 'F':
+            if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+            else document.exitFullscreen();
+            break;
+        case '+': case '=':
+            cellSize = Math.min(28, cellSize + 2);
+            document.getElementById('ctrl-cell').value = cellSize;
+            document.getElementById('val-cell').textContent = cellSize;
+            break;
+        case '-':
+            cellSize = Math.max(4, cellSize - 2);
+            document.getElementById('ctrl-cell').value = cellSize;
+            document.getElementById('val-cell').textContent = cellSize;
+            break;
+        case '1': setMode('ascii'); break;
+        case '2': setMode('block'); break;
+        case '3': setMode('binary'); break;
+        case '4': setMode('braille'); break;
+        case '5': setMode('matrix'); break;
+        case '6': setMode('edges'); break;
+    }
+});
+
+function setMode(m) {
+    mode = m;
+    document.querySelectorAll('.mode-btn[data-mode]').forEach(b => {
+        b.classList.toggle('active', b.dataset.mode === m);
+    });
+    notify('MODE: ' + m.toUpperCase());
+}
+
+// ── HUD SYNC ──
+document.getElementById('hud-cell').textContent = cellSize;
+document.getElementById('hud-color').textContent = activeColor;
+</script>
+</body>
+</html>
